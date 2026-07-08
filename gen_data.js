@@ -63,6 +63,45 @@ function toDisplayName(folder) {
     .join(' ');
 }
 
+/* ---------- folder -> full display name ----------
+   Folder names / slugs are NEVER changed — they're used as-is for file
+   paths (photos/{folder}/..., thumbs/{folder}/...). This map only
+   controls what name is *shown* in the UI (people list, filters, photo
+   cards, lightbox, search results, downloads, etc.). Any folder not
+   listed here automatically falls back to a title-cased version of the
+   folder name, so new/unmapped student folders never break the build. */
+const FULL_NAME_MAP = {
+  'ROMA': 'Turganbayev Ramazan Talgatuly',
+  'BALNUR ZH': 'Zhumabay Balnur Kalzhigitqyzy',
+  'ULZHAN': 'Kassymbekova Ulzhan Maratkyzy',
+  'NURDAULET': 'Beysenbay Nurdaulet Pirzhanuly',
+  'AKERKE I': 'Ilessova Akerke Gazizkyzy',
+  'BALNUR A': 'Alimkhan Balnur Almaskhankyzy',
+  'ASEM K': 'Asem Kairbekqyzy',
+  'DIAS': 'Bulegen Dias Begaliuly',
+  'DINARA': 'Arshabai Dinara Ualikhanqyzy',
+  'OLZHAS': 'Kalzhan Olzhas Bauyrzhanuly',
+  'TOKTASOV NURDAULET': 'Toktasov Nurdaulet Shyngysuly',
+  'AKERKE K': 'Kalmanbai Akerke Nurbekqyzy',
+  'ASLZAT': 'Bakirova Assylzat Arystanqyzy',
+  'ASEM T': 'Tolegen Assem Armanqyzy',
+  'MADINA': 'Andassova Madina Dunenbayqyzy',
+  'SHAMSAYA': 'Mussabek Shamsaya Bakytzhankyzy',
+  'ASEMAI': 'Makhanbet Asemai',
+  'MAHDI': 'Mohammad Mahdi Mohammadi',
+  'AKBAIAN': 'Utkerbek Akbaian',
+  'ALMAS': 'Kassymbekov Almasbek',
+  'NURGISA': 'Kundebay Nurgisa Kaumetuly',
+  'OBSHI': 'Group Photos',
+  'THE BOYS': 'Boys Group',
+  'THE GIRL': 'Girls Group',
+};
+
+function fullNameFor(folder) {
+  const key = folder.trim().toUpperCase();
+  return FULL_NAME_MAP[key] || toDisplayName(folder);
+}
+
 function slugify(str) {
   return (
     str
@@ -142,7 +181,7 @@ function generate() {
 
     people.push({
       id: personId,
-      name: toDisplayName(folder),
+      name: fullNameFor(folder),
       folder,
       count: photoFiles.length,
       thumbnail: `thumbs/${folder}/${photoFiles[0]}`,
