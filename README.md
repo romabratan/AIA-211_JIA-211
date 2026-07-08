@@ -1,24 +1,29 @@
 # JIA-211 Graduation Gallery 2026
 
-Premium dark-mode, black & gold digital memory archive for the JIA-211 graduating class (2022–2026). Pure HTML / CSS / vanilla JS — no framework, no backend. Deploys as-is on Vercel (or any static host).
+A premium, dark-mode, black & gold digital memory archive for a university
+graduating class. Pure HTML / CSS / vanilla JavaScript — no frameworks, no
+build step, no backend, no database. Deploys to Vercel (or any static host)
+as-is.
 
 ## Structure
 
 ```
-├── index.html          # Single-page app shell (sidebar + all sections)
-├── css/style.css        # Design tokens, layout, components, responsive rules
-├── js/main.js            # Data loading, rendering, filters, lightbox, downloads
-├── data/photos.json      # 1169-photo dataset (categories, people, metadata)
-├── gen_data.js            # Node script that generated photos.json (edit + rerun to reshape data)
-├── photos/  thumbs/  downloads/  avatars/   # Drop real assets here (see below)
-└── vercel.json           # Static deploy config
+index.html          Page markup (sidebar, hero, sections, lightbox)
+css/style.css        Full design system (dark/gold glass theme, responsive)
+js/main.js            App logic: data loading, filters, search, lightbox,
+                       slideshow, infinite scroll, mobile drawer
+js/placeholder.js     Canvas-based fallback image generator (used only if a
+                       real photo/thumb/avatar file is missing)
+gen_data.js            Scans photos/ and writes data/photos.json — no
+                       filenames are ever hardcoded
+data/photos.json       Generated dataset: meta, categories, people, photos
+photos/<FOLDER>/       Full-resolution photos, one folder per student
+thumbs/<FOLDER>/       Matching thumbnails, same folder/filename convention
+downloads/              Pre-zipped archives (see downloads/README.md)
+vercel.json             Static hosting + cache headers
 ```
 
-## Using your real photos
-
-`gen_data.js` scans your actual folders and builds `data/photos.json` automatically — nothing is hardcoded.
-
-Expected layout:
+## Folder convention
 
 ```
 photos/
@@ -27,56 +32,81 @@ photos/
     ROMA_002.webp
   AKBAIAN/
     AKBAIAN_001.webp
-  AKERKE K/
     ...
 thumbs/
   ROMA/
-    ROMA_001.webp        # same filenames as photos/, thumbnail-sized
+    ROMA_001.webp        <- thumbnail for photos/ROMA/ROMA_001.webp
   AKBAIAN/
     ...
 ```
 
-- Each folder under `photos/` = one student. The folder name becomes their display name (e.g. `AKERKE K` → "Akerke K") and their slug.
-- Filenames are read directly from disk — any naming scheme works (`.webp`, `.jpg`, `.jpeg`, `.png`), nothing is hardcoded.
-- If a matching thumb is missing for a given photo, that photo automatically falls back to the full-size file so nothing breaks.
-- Photo `date` and `sizeMb` are read from the real file's mtime/size on disk.
-- Categories (Обши мания, Обши свободный, etc.) are still assigned per photo, deterministically, purely to keep the Categories/filter UI working — the folder structure itself doesn't carry category info.
+Each top-level folder under `photos/` is treated as one student. The folder
+name becomes the student's display name (title-cased) and their `id` (a
+slugified version, e.g. `AKERKE I` → `akerke-i`). Every file inside is
+automatically picked up — any filename, any count, any order.
 
-To (re)build the dataset:
+## Regenerating the data
+
+Whenever photos/thumbs change (added, removed, renamed, new student folder,
+etc.), just run:
 
 ```bash
 node gen_data.js
 ```
 
-This overwrites `data/photos.json` from whatever is currently in `photos/` + `thumbs/`. Re-run it any time you add/remove/rename student folders or photos.
+This rewrites `data/photos.json` with:
 
-Optional: pre-zip category/person archives into `downloads/` and point the download buttons at them instead of the in-browser JSZip generator (see `js/main.js` → `downloadZip`).
+- `meta` — total photos/people/categories, real scanned size, year range
+- `categories` — 6 cosmetic categories used for the category browsing UI
+  (the real folder structure is student-based, so each photo is assigned a
+  category deterministically so filtering/browsing by category still works)
+- `people` — one object per student: `{ id, name, folder, count, thumbnail, photos }`
+  — `photos` is the full filename list for that student
+- `photos` — one record per photo: `{ id, folder, file, person, cat, date, views }`
 
-## Features implemented
+## Running locally
 
-- Sidebar navigation with active-section highlighting, mobile drawer, bottom nav on mobile
-- Hero with cinematic overlay, count-up stats, CTA
-- Category cards (6 categories) with hover zoom + photo counts
-- Full gallery: search, category filter, person filter, sort (recent / popular / random), infinite scroll, lazy-loaded images
-- People directory (19 people) with avatar + count, click-to-filter
-- Lightbox: keyboard nav, prev/next, slideshow mode, fullscreen, per-photo download
-- Downloads: "all photos" + per-category + per-person ZIP generation (client-side via JSZip, no backend), single-photo download
-- Toast notifications, glassmorphism cards, reduced-motion support, focus-visible states
-
-## Local preview
-
-Any static server works, e.g.:
+No build step required:
 
 ```bash
+npx serve .
+# or
 python3 -m http.server 8080
 ```
 
 Then open `http://localhost:8080`.
 
-## Deploy on Vercel
+## Image loading & fallbacks
 
-Push this folder to a Git repo and import it in Vercel as a static project (no build command needed), or run:
+- Grid thumbnails load from `thumbs/{folder}/{file}`
+- Lightbox / downloads load full-resolution from `photos/{folder}/{file}`
+- If a real file 404s, the UI automatically falls back: thumb → full photo →
+  generated gold/black placeholder — so the site never shows a broken image,
+  even before all real media has been uploaded.
 
-```bash
-vercel --prod
-```
+## Adding ZIP downloads
+
+Drop archives into `downloads/` using the filenames listed in
+`downloads/README.md`. Download buttons check file existence (HTTP HEAD)
+before triggering a download, so archives can be added incrementally.
+
+## Sample content
+
+The `photos/` and `thumbs/` folders currently contain small generated
+demo images (19 sample students) purely so the site is browsable out of the
+box. Replace these folders with your real photos/thumbnails — matching the
+same convention — and re-run `node gen_data.js`.
+
+## Features
+
+- Search (photos / people / category / folder / date)
+- Filter by category and by person (backed by precomputed lookup indices
+  for fast filtering as the archive grows)
+- Sort: Соңғысы (recent) · Көп қаралған (most viewed) · Кездейсоқ (random)
+- Masonry photo grid with hover zoom + per-photo download
+- Lazy loading + infinite scroll (IntersectionObserver)
+- Lightbox with keyboard navigation, fullscreen mode, and slideshow with
+  progress bar
+- Category and per-person ZIP download cards (existence-checked)
+- Responsive layout: desktop sidebar ↔ mobile drawer + bottom nav bar
+- Animated hero counters synced to the real scanned dataset
